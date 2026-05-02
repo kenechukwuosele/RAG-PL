@@ -1,0 +1,7 @@
+.env
+venv/
+db/
+cache.json
+__pycache__/
+*.pyc
+*.cpython-*
