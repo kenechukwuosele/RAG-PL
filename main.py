@@ -1,9 +1,3 @@
-"""Entry point for the RAG demo.
-
-This module wires together query expansion, retrieval, reranking, answer
-generation, caching, and optional evaluation for a few sample questions.
-"""
-
 from retriever import retrieve
 from generator import generate_answer, expand_query
 from reranker import rerank
@@ -11,14 +5,15 @@ from evaluator import evaluate
 from cache import get_cached, set_cache
 
 def ask(question, run_eval=False):
-    print(f"\nQuestion: {question}")
-
-    # Check cache first
     cached = get_cached(question)
     if cached:
-        print(f"\n[CACHED] Answer: {cached['answer']}")
-        print(f"Sources: {', '.join(cached['sources'])}")
-        return
+        return {
+            "question": question,
+            "answer": cached["answer"],
+            "sources": cached["sources"],
+            "cached": True,
+            "evaluation": None
+        }
 
     queries = expand_query(question)
 
@@ -35,25 +30,31 @@ def ask(question, run_eval=False):
     docs, metas = rerank(question, all_docs, all_metas, top_k=5, threshold=0.0)
 
     if not docs:
-        print("\nAnswer: I don't have enough information in my knowledge base.")
-        return
+        return {
+            "question": question,
+            "answer": "I don't have enough information in my knowledge base.",
+            "sources": [],
+            "cached": False,
+            "evaluation": None
+        }
 
     answer = generate_answer(question, docs)
     sources = list(set(m["source"] for m in metas))
-
-    print(f"\nAnswer: {answer}")
-    print(f"\nSources: {', '.join(sources)}")
-
-    # Store in cache
     set_cache(question, answer, sources)
 
+    eval_result = None
     if run_eval:
-        print("\n--- Evaluation ---")
-        scores = evaluate(question, docs, answer)
-        print(scores)
+        eval_result = evaluate(question, docs, answer)
+
+    return {
+        "question": question,
+        "answer": answer,
+        "sources": sources,
+        "cached": False,
+        "evaluation": eval_result
+    }
 
 if __name__ == "__main__":
-    ask("How does gamification improve student engagement in LMS?")
-    ask("What role does AI play in automated grading?")
-    ask("How does real-time feedback affect learning outcomes?")
-    ask("What is the capital of France?")  # should fail gracefully
+    result = ask("What are the challenges of e-learning?")
+    print(f"\nAnswer: {result['answer']}")
+    print(f"Sources: {', '.join(result['sources'])}")
