@@ -3,23 +3,19 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from main import ask as ask_question
 import logging
-import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    if not os.path.exists("db"):
-        logger.info("Indexing papers...")
-        from parser import load_all_papers
-        from retriever import index_papers
-        papers = load_all_papers()
-        index_papers(papers)
-        logger.info("Indexing complete!")
+    logger.info("Indexing papers...")
+    from parser import load_all_papers
+    from retriever import index_papers
+    papers = load_all_papers()
+    index_papers(papers)
+    logger.info("Indexing complete!")
     yield
-    # Shutdown (nothing to clean up)
 
 app = FastAPI(title="RAG Research Assistant", lifespan=lifespan)
 
